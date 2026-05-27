@@ -1,0 +1,210 @@
+{
+    "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#identityGovernance/entitlementManagement/accessPackages(assignmentPolicies(),resourceRoleScopes())",
+    "@microsoft.graph.tips": "Use $select to choose only the properties your app needs, as this can lead to performance improvements. For example: GET identityGovernance/entitlementManagement/accessPackages?$select=createdDateTime,description",
+    "value": [
+        {
+            "id": "c6b8884a-ab63-41b1-a5d5-b2ce29e36213",
+            "displayName": "Agent — Groups.Read.All",
+            "uniqueName": null,
+            "description": "Grants Groups.Read.All to agents on demand.",
+            "isHidden": false,
+            "createdDateTime": "2026-05-21T01:34:54.723Z",
+            "modifiedDateTime": "2026-05-21T01:37:02.21Z",
+            "assignmentPolicies@odata.context": "https://graph.microsoft.com/v1.0/$metadata#identityGovernance/entitlementManagement/accessPackages('c6b8884a-ab63-41b1-a5d5-b2ce29e36213')/assignmentPolicies",
+            "assignmentPolicies": [],
+            "resourceRoleScopes@odata.context": "https://graph.microsoft.com/v1.0/$metadata#identityGovernance/entitlementManagement/accessPackages('c6b8884a-ab63-41b1-a5d5-b2ce29e36213')/resourceRoleScopes",
+            "resourceRoleScopes": [
+                {
+                    "id": "d54d76a0-441e-4f3c-82a7-bf79341b9096_ec9e7269-315b-4f05-b1e6-ea1542fd7c08",
+                    "createdDateTime": "2026-05-21T01:34:55.12Z"
+                }
+            ]
+        },
+        {
+            "id": "7f04e091-c58e-4a9f-b90a-1d239e5ccc9b",
+            "displayName": "PoC - Agent ID GL Posting",
+            "uniqueName": null,
+            "description": "Target package. Granted via sponsor request to an Agent ID. Incompatible with Finance Approver.",
+            "isHidden": false,
+            "createdDateTime": "2026-05-19T22:09:16.043Z",
+            "modifiedDateTime": "2026-05-19T22:09:16.043Z",
+            "assignmentPolicies@odata.context": "https://graph.microsoft.com/v1.0/$metadata#identityGovernance/entitlementManagement/accessPackages('7f04e091-c58e-4a9f-b90a-1d239e5ccc9b')/assignmentPolicies",
+            "assignmentPolicies": [
+                {
+                    "id": "ed0b3c32-4842-41fb-800a-02e8d4272ac8",
+                    "displayName": "Direct Assignment - Agent ID SOD-Checked",
+                    "description": "Sponsor (catalog manager) submits direct assignments; SOD sponsor-check extension validates conflicts.",
+                    "allowedTargetScope": "allDirectoryAgentIdentities",
+                    "createdDateTime": "2026-05-19T23:13:24.753Z",
+                    "modifiedDateTime": "2026-05-20T01:23:56.753Z",
+                    "automaticRequestSettings": null,
+                    "reviewSettings": null,
+                    "specificAllowedTargets": [],
+                    "expiration": {
+                        "endDateTime": null,
+                        "duration": null,
+                        "type": "noExpiration"
+                    },
+                    "requestorSettings": {
+                        "enableTargetsToSelfAddAccess": false,
+                        "enableTargetsToSelfUpdateAccess": false,
+                        "enableTargetsToSelfRemoveAccess": true,
+                        "allowCustomAssignmentSchedule": false,
+                        "enableOnBehalfRequestorsToAddAccess": true,
+                        "enableOnBehalfRequestorsToUpdateAccess": true,
+                        "enableOnBehalfRequestorsToRemoveAccess": true,
+                        "onBehalfRequestors": []
+                    },
+                    "requestApprovalSettings": {
+                        "isApprovalRequiredForAdd": true,
+                        "isApprovalRequiredForUpdate": false,
+                        "isRequestorJustificationRequired": true,
+                        "stages": [
+                            {
+                                "durationBeforeAutomaticDenial": "P14D",
+                                "isApproverJustificationRequired": true,
+                                "isEscalationEnabled": false,
+                                "durationBeforeEscalation": "PT0S",
+                                "primaryApprovers": [
+                                    {
+                                        "@odata.type": "#microsoft.graph.singleUser",
+                                        "userId": "4034204c-8ebd-4771-abbf-4fb3fe78307e",
+                                        "description": "Adele Vance"
+                                    }
+                                ],
+                                "fallbackPrimaryApprovers": [],
+                                "escalationApprovers": [],
+                                "fallbackEscalationApprovers": []
+                            }
+                        ]
+                    },
+                    "notificationSettings": {
+                        "isAssignmentNotificationDisabled": false
+                    },
+                    "questions@odata.context": "https://graph.microsoft.com/v1.0/$metadata#identityGovernance/entitlementManagement/accessPackages('7f04e091-c58e-4a9f-b90a-1d239e5ccc9b')/assignmentPolicies('ed0b3c32-4842-41fb-800a-02e8d4272ac8')/questions",
+                    "questions": []
+                }
+            ],
+            "resourceRoleScopes@odata.context": "https://graph.microsoft.com/v1.0/$metadata#identityGovernance/entitlementManagement/accessPackages('7f04e091-c58e-4a9f-b90a-1d239e5ccc9b')/resourceRoleScopes",
+            "resourceRoleScopes": []
+        },
+        {
+            "id": "04d13f94-5587-440e-9c6b-f42fe35b0bff",
+            "displayName": "PoC - Finance Approver",
+            "uniqueName": null,
+            "description": "Sensitive finance-approval access; SOD-incompatible with target.",
+            "isHidden": false,
+            "createdDateTime": "2026-05-19T22:09:15.343Z",
+            "modifiedDateTime": "2026-05-19T22:09:15.343Z",
+            "assignmentPolicies@odata.context": "https://graph.microsoft.com/v1.0/$metadata#identityGovernance/entitlementManagement/accessPackages('04d13f94-5587-440e-9c6b-f42fe35b0bff')/assignmentPolicies",
+            "assignmentPolicies": [
+                {
+                    "id": "79d010e5-ed47-4712-a19a-07e0f0f67483",
+                    "displayName": "Agents Policy",
+                    "description": "",
+                    "allowedTargetScope": "allDirectoryAgentIdentities",
+                    "createdDateTime": "2026-05-20T01:26:04.047Z",
+                    "modifiedDateTime": "2026-05-20T01:26:04.593Z",
+                    "automaticRequestSettings": null,
+                    "reviewSettings": null,
+                    "specificAllowedTargets": [],
+                    "expiration": {
+                        "endDateTime": null,
+                        "duration": "P365D",
+                        "type": "afterDuration"
+                    },
+                    "requestorSettings": {
+                        "enableTargetsToSelfAddAccess": false,
+                        "enableTargetsToSelfUpdateAccess": false,
+                        "enableTargetsToSelfRemoveAccess": true,
+                        "allowCustomAssignmentSchedule": true,
+                        "enableOnBehalfRequestorsToAddAccess": true,
+                        "enableOnBehalfRequestorsToUpdateAccess": true,
+                        "enableOnBehalfRequestorsToRemoveAccess": true,
+                        "onBehalfRequestors": []
+                    },
+                    "requestApprovalSettings": {
+                        "isApprovalRequiredForAdd": true,
+                        "isApprovalRequiredForUpdate": false,
+                        "isRequestorJustificationRequired": true,
+                        "stages": [
+                            {
+                                "durationBeforeAutomaticDenial": "P14D",
+                                "isApproverJustificationRequired": true,
+                                "isEscalationEnabled": false,
+                                "durationBeforeEscalation": "PT0S",
+                                "primaryApprovers": [
+                                    {
+                                        "@odata.type": "#microsoft.graph.singleUser",
+                                        "userId": "4034204c-8ebd-4771-abbf-4fb3fe78307e",
+                                        "description": "Adele Vance"
+                                    }
+                                ],
+                                "fallbackPrimaryApprovers": [],
+                                "escalationApprovers": [],
+                                "fallbackEscalationApprovers": []
+                            }
+                        ]
+                    },
+                    "notificationSettings": {
+                        "isAssignmentNotificationDisabled": false
+                    },
+                    "questions@odata.context": "https://graph.microsoft.com/v1.0/$metadata#identityGovernance/entitlementManagement/accessPackages('04d13f94-5587-440e-9c6b-f42fe35b0bff')/assignmentPolicies('79d010e5-ed47-4712-a19a-07e0f0f67483')/questions",
+                    "questions": []
+                },
+                {
+                    "id": "eeecee9d-59b9-449c-a456-a2b3d42e2e2f",
+                    "displayName": "Direct Admin Assignment",
+                    "description": "Admin direct assignment policy for PoC SOD seeding",
+                    "allowedTargetScope": "specificDirectoryUsers",
+                    "createdDateTime": "2026-05-19T22:09:19.703Z",
+                    "modifiedDateTime": "2026-05-19T22:09:19.717Z",
+                    "automaticRequestSettings": null,
+                    "reviewSettings": null,
+                    "specificAllowedTargets": [],
+                    "expiration": {
+                        "endDateTime": null,
+                        "duration": null,
+                        "type": "noExpiration"
+                    },
+                    "requestorSettings": {
+                        "enableTargetsToSelfAddAccess": false,
+                        "enableTargetsToSelfUpdateAccess": false,
+                        "enableTargetsToSelfRemoveAccess": false,
+                        "allowCustomAssignmentSchedule": false,
+                        "enableOnBehalfRequestorsToAddAccess": false,
+                        "enableOnBehalfRequestorsToUpdateAccess": false,
+                        "enableOnBehalfRequestorsToRemoveAccess": false,
+                        "onBehalfRequestors": []
+                    },
+                    "requestApprovalSettings": {
+                        "isApprovalRequiredForAdd": false,
+                        "isApprovalRequiredForUpdate": false,
+                        "isRequestorJustificationRequired": false,
+                        "stages": []
+                    },
+                    "notificationSettings": {
+                        "isAssignmentNotificationDisabled": false
+                    },
+                    "questions@odata.context": "https://graph.microsoft.com/v1.0/$metadata#identityGovernance/entitlementManagement/accessPackages('04d13f94-5587-440e-9c6b-f42fe35b0bff')/assignmentPolicies('eeecee9d-59b9-449c-a456-a2b3d42e2e2f')/questions",
+                    "questions": []
+                }
+            ],
+            "resourceRoleScopes@odata.context": "https://graph.microsoft.com/v1.0/$metadata#identityGovernance/entitlementManagement/accessPackages('04d13f94-5587-440e-9c6b-f42fe35b0bff')/resourceRoleScopes",
+            "resourceRoleScopes": []
+        },
+        {
+            "id": "70183259-224b-4920-825e-68feb1cc277a",
+            "displayName": "Sales and Marketing",
+            "uniqueName": null,
+            "description": "Access for Sales and Marketing users and guests",
+            "isHidden": false,
+            "createdDateTime": "2026-05-11T19:21:44.903Z",
+            "modifiedDateTime": "2026-05-11T19:21:44.903Z",
+            "assignmentPolicies@odata.context": "https://graph.microsoft.com/v1.0/$metadata#identityGovernance/entitlementManagement/accessPackages('70183259-224b-4920-825e-68feb1cc277a')/assignmentPolicies",
+            "assignmentPolicies": [],
+            "resourceRoleScopes@odata.context": "https://graph.microsoft.com/v1.0/$metadata#identityGovernance/entitlementManagement/accessPackages('70183259-224b-4920-825e-68feb1cc277a')/resourceRoleScopes",
+            "resourceRoleScopes": []
+        }
+    ]
+}

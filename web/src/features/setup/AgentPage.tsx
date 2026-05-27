@@ -1,0 +1,33 @@
+import { SetupStepPage } from './SetupStepPage';
+import { PortalLink } from '../../components/Links';
+import { portal } from '../../lib/portalLinks';
+
+export function AgentPage() {
+  return (
+    <SetupStepPage
+      title="Step 2 — Agent ID"
+      intro={
+        <>
+          Create an Agent ID linked to the blueprint from Step 1. Specify the sponsor below. A
+          client secret is generated and stored securely on the backend (in memory) so the
+          Govern journey can authenticate as the agent later.
+        </>
+      }
+      fields={[
+        { name: 'name', label: 'Agent name', defaultValue: 'GOV4Agents Demo Agent', required: true },
+        {
+          name: 'sponsorUpn',
+          label: 'Sponsor UPN',
+          helper: 'User principal name of the user who will sponsor this agent',
+          required: true,
+        },
+      ]}
+      endpoint="/api/setup/agent"
+      submitLabel="Create agent"
+      renderResult={(r) => {
+        const id = (r as { agent?: { id?: string } }).agent?.id;
+        return id ? <PortalLink href={portal.agentId(id)}>Open in Entra portal</PortalLink> : null;
+      }}
+    />
+  );
+}
