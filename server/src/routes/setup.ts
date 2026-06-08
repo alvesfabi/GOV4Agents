@@ -223,11 +223,11 @@ setupRouter.post('/agent', async (req: Req, res) => {
 
 setupRouter.post('/access-package', async (req: Req, res) => {
   try {
-    const { approverUpn } = req.body ?? {};
+    const { approverUpn, suffix: customSuffix } = req.body ?? {};
     if (!approverUpn) return res.status(400).json({ error: 'approverUpn required' });
     const g = new GraphClient(req.userAccessToken!);
 
-    const suffix = String(Math.floor(Math.random() * 900) + 100);
+    const suffix = customSuffix?.trim() || String(Math.floor(Math.random() * 900) + 100);
 
     // 3a. Catalog (idempotent: reuse if a catalog with this name already exists)
     const CATALOG_NAME = `GOV4Agents Catalog ${suffix}`;
@@ -307,7 +307,7 @@ setupRouter.post('/access-package', async (req: Req, res) => {
     const createAp = async (params: {
       displayName: string;
       description: string;
-      permissionName: 'Group.Read.All' | 'Group.ReadWrite.All';
+      permissionName: 'Group.Read.All' | 'Directory.Read.All';
       policyDisplayName: string;
     }) => {
       const permissionId = GRAPH_DELEGATED_PERMISSIONS[params.permissionName];
@@ -409,11 +409,16 @@ setupRouter.post('/access-package', async (req: Req, res) => {
       );
 
       // PUT re-index workaround so "Requesting for Sponsored agent" appears.
-      await g.call(
-        GraphScopes.entitlement,
-        `/identityGovernance/entitlementManagement/assignmentPolicies/${policy.id}`,
-        { method: 'PUT', body: policyBody },
-      );
+      // This is best-effort — a 504 here doesn't mean the policy failed.
+      try {
+        await g.call(
+          GraphScopes.entitlement,
+          `/identityGovernance/entitlementManagement/assignmentPolicies/${policy.id}`,
+          { method: 'PUT', body: policyBody },
+        );
+      } catch (putErr: unknown) {
+        console.warn('[setup/access-package] PUT re-index failed (non-blocking):', putErr);
+      }
 
       return { ap, policy };
     };
@@ -426,13 +431,13 @@ setupRouter.post('/access-package', async (req: Req, res) => {
       policyDisplayName: `Agents — sponsor requested (Group.Read.All) ${suffix}`,
     });
 
-    // 3e. Second access package — Group.ReadWrite.All (incompatible with ap1)
+    // 3e. Second access package — Directory.Read.All (incompatible with ap1)
     const ap2 = await createAp({
-      displayName: `Agent — Group.ReadWrite.All ${suffix}`,
+      displayName: `Agent — Directory.Read.All ${suffix}`,
       description:
-        'Grants Group.ReadWrite.All to agents on demand. Incompatible with the Group.Read.All package (Separation of Duties): an agent that reads group membership should not also be able to modify it.',
-      permissionName: 'Group.ReadWrite.All',
-      policyDisplayName: `Agents — sponsor requested (Group.ReadWrite.All) ${suffix}`,
+        'Grants Directory.Read.All to agents on demand. Incompatible with the Group.Read.All package (Separation of Duties).',
+      permissionName: 'Directory.Read.All',
+      policyDisplayName: `Agents — sponsor requested (Directory.Read.All) ${suffix}`,
     });
 
     // 3f. Separation of Duties — declare ap1 as incompatible with ap2 so any
@@ -659,6 +664,16 @@ async function ensureCreated<T>(p: Promise<T>): Promise<T | undefined> {
     throw err;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Manual session patch — inject pre-existing resource IDs for demo recovery.
+// ---------------------------------------------------------------------------
+
+setupRouter.post('/manual-session', (req: Req, res) => {
+  const patch = req.body ?? {};
+  setSession(req.sessionId!, patch);
+  res.json({ ok: true, session: req.sessionData });
+});
 
 // ---------------------------------------------------------------------------
 // 6. Summary

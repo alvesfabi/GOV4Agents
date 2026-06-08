@@ -20,13 +20,12 @@ export function AccessPackagePage() {
               just-in-time, governed permission elevation for an agent identity.
             </li>
             <li>
-              <strong>Access Package #2 — <code>Group.ReadWrite.All</code> (Separation of
+              <strong>Access Package #2 — <code>Directory.Read.All</code> (Separation of
               Duties).</strong> This package is declared <em>incompatible</em> with package
-              #1. An agent that reads group membership should never also be able to modify
-              it — that would be a privilege escalation vector (the agent could add itself to
-              security groups). Its sole purpose is to prove that Entitlement Management
-              blocks the request at submission time when a requestor already has (or has
-              requested) the conflicting package.
+              #1. We never expect it to be granted — its sole purpose is to prove that
+              Entitlement Management blocks the request at submission time when a requestor
+              already has (or has requested) the conflicting package. This is how you enforce
+              toxic-combination policies without relying on reviewer vigilance.
             </li>
           </ul>
           Both packages share the same assignment policy shape (open to users, service
@@ -40,6 +39,11 @@ export function AccessPackagePage() {
           label: 'Approver UPN',
           helper: 'Email of the user who will approve access requests for this package',
           required: true,
+        },
+        {
+          name: 'suffix',
+          label: 'Name suffix (optional)',
+          helper: 'Suffix appended to catalog and package names (e.g. "demo1"). Random if empty.',
         },
       ]}
       endpoint="/api/setup/access-package"
@@ -79,10 +83,10 @@ export function AccessPackagePage() {
                     result.accessPackage2.displayName,
                   )}
                 >
-                  Open Group.ReadWrite.All package in Entra (SoD: incompatible with Group.Read.All)
+                  Open Directory.Read.All package in Entra (SoD: incompatible with Group.Read.All)
                 </PortalLink>
                 <PortalLink href={portal.myAccessRequest(result.accessPackage2.id)}>
-                  MyAccess request URL (Group.ReadWrite.All)
+                  MyAccess request URL (Directory.Read.All)
                 </PortalLink>
               </div>
             )}

@@ -36,5 +36,5 @@ export const MICROSOFT_GRAPH_APP_ID = '00000003-0000-0000-c000-000000000000';
 export const GRAPH_DELEGATED_PERMISSIONS = {
   'User.Read.All': 'a154be20-db9c-4678-8ab7-66f6cc099a59',
   'Group.Read.All': '5b567255-7703-4780-807c-7be8301ae99b',
-  'Group.ReadWrite.All': '62a82d76-70ea-41e2-9197-370581804d09',
+  'Directory.Read.All': '7ab1d382-f21e-4acd-a863-ba3e13f7da61',
 };
