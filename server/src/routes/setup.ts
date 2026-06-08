@@ -17,6 +17,26 @@ setupRouter.use(requireBearer, attachSession);
 
 type Req = AuthedRequest & SessionedRequest;
 
+/** Returns the demo suffix from the session or a random 3-digit number. */
+function getSuffix(req: Req): string {
+  return req.sessionData?.demoSuffix?.trim() || String(Math.floor(Math.random() * 900) + 100);
+}
+
+// ---------------------------------------------------------------------------
+// Demo suffix — set once, reused across all setup steps.
+// ---------------------------------------------------------------------------
+
+setupRouter.post('/suffix', (req: Req, res) => {
+  const { suffix } = req.body ?? {};
+  if (!suffix?.trim()) return res.status(400).json({ error: 'suffix required' });
+  setSession(req.sessionId!, { demoSuffix: suffix.trim() });
+  res.json({ ok: true, suffix: suffix.trim() });
+});
+
+setupRouter.get('/suffix', (req: Req, res) => {
+  res.json({ ok: true, suffix: req.sessionData?.demoSuffix ?? '' });
+});
+
 // ---------------------------------------------------------------------------
 // 1. Agent Blueprint
 // ---------------------------------------------------------------------------
@@ -223,11 +243,11 @@ setupRouter.post('/agent', async (req: Req, res) => {
 
 setupRouter.post('/access-package', async (req: Req, res) => {
   try {
-    const { approverUpn, suffix: customSuffix } = req.body ?? {};
+    const { approverUpn } = req.body ?? {};
     if (!approverUpn) return res.status(400).json({ error: 'approverUpn required' });
     const g = new GraphClient(req.userAccessToken!);
 
-    const suffix = customSuffix?.trim() || String(Math.floor(Math.random() * 900) + 100);
+    const suffix = getSuffix(req);
 
     // 3a. Catalog (idempotent: reuse if a catalog with this name already exists)
     const CATALOG_NAME = `GOV4Agents Catalog ${suffix}`;
@@ -499,7 +519,7 @@ const LCW_TASKS = {
 setupRouter.post('/lcw', async (req: Req, res) => {
   try {
     const g = new GraphClient(req.userAccessToken!);
-    const suffix = String(Math.floor(Math.random() * 900) + 100);
+    const suffix = getSuffix(req);
     const wf = await g.call<{ id: string; displayName: string }>(
       GraphScopes.lcw,
       '/identityGovernance/lifecycleWorkflows/workflows',
@@ -552,7 +572,7 @@ setupRouter.post('/lcw', async (req: Req, res) => {
 setupRouter.post('/csa-and-ca', async (req: Req, res) => {
   try {
     const g = new GraphClient(req.userAccessToken!);
-    const suffix = String(Math.floor(Math.random() * 900) + 100);
+    const suffix = getSuffix(req);
     const setName = `AgentsCSA${suffix}`;
     const attributeName = `TAG${suffix}`;
 

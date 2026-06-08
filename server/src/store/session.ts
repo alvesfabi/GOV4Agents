@@ -9,6 +9,7 @@
  */
 
 export interface SessionData {
+  demoSuffix?: string;
   blueprint?: {
     id: string;
     name: string;

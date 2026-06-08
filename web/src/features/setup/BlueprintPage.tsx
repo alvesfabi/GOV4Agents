@@ -15,7 +15,7 @@ export function BlueprintPage() {
         </>
       }
       fields={[
-        { name: 'name', label: 'Blueprint name', defaultValue: 'GOV4Agents Blueprint', required: true },
+        { name: 'name', label: 'Blueprint name', defaultPrefix: 'GOV4Agents Blueprint ', required: true },
         {
           name: 'sponsorUpn',
           label: 'Sponsor UPN',

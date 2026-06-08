@@ -40,11 +40,6 @@ export function AccessPackagePage() {
           helper: 'Email of the user who will approve access requests for this package',
           required: true,
         },
-        {
-          name: 'suffix',
-          label: 'Name suffix (optional)',
-          helper: 'Suffix appended to catalog and package names (e.g. "demo1"). Random if empty.',
-        },
       ]}
       endpoint="/api/setup/access-package"
       submitLabel="Create access packages"

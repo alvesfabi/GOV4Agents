@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import {
   Button,
   Field,
@@ -12,6 +12,7 @@ import {
 import { useApi, ApiError } from '../../api/client';
 import { JsonViewer } from '../../components/JsonViewer';
 import { ErrorPanel } from '../../components/ErrorPanel';
+import { useDemoSuffix } from './DemoSuffixContext';
 
 const useStyles = makeStyles({
   root: { display: 'flex', flexDirection: 'column', gap: '16px' },
@@ -55,6 +56,8 @@ export interface FieldDef {
   label: string;
   helper?: ReactNode;
   defaultValue?: string;
+  /** If set, the default value is `${defaultPrefix}${suffix}` where suffix comes from context. */
+  defaultPrefix?: string;
   required?: boolean;
 }
 
@@ -78,9 +81,33 @@ export function SetupStepPage({
 }: SetupStepPageProps) {
   const styles = useStyles();
   const apiFetch = useApi();
+  const { suffix } = useDemoSuffix();
+
+  function computeDefault(f: FieldDef): string {
+    if (f.defaultPrefix && suffix) return `${f.defaultPrefix}${suffix}`;
+    return f.defaultValue ?? '';
+  }
+
   const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(fields.map((f) => [f.name, f.defaultValue ?? ''])),
+    Object.fromEntries(fields.map((f) => [f.name, computeDefault(f)])),
   );
+
+  // Update defaults when suffix changes (only fields the user hasn't manually edited)
+  useEffect(() => {
+    setValues((prev) => {
+      const next = { ...prev };
+      for (const f of fields) {
+        if (f.defaultPrefix) {
+          const currentVal = prev[f.name] ?? '';
+          // Update if empty or still matches a previous auto-generated value
+          if (!currentVal || currentVal.startsWith(f.defaultPrefix)) {
+            next[f.name] = `${f.defaultPrefix}${suffix}`;
+          }
+        }
+      }
+      return next;
+    });
+  }, [suffix, fields]);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<unknown>(null);
   const [error, setError] = useState<unknown>(null);

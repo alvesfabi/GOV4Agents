@@ -14,7 +14,7 @@ export function AgentPage() {
         </>
       }
       fields={[
-        { name: 'name', label: 'Agent name', defaultValue: 'GOV4Agents Demo Agent', required: true },
+        { name: 'name', label: 'Agent name', defaultPrefix: 'GOV4Agents Agent ', required: true },
         {
           name: 'sponsorUpn',
           label: 'Sponsor UPN',
