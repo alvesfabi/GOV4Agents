@@ -75,17 +75,39 @@ VITE_AUTHORITY=https://login.microsoftonline.com/common
 ### 4. API permissions
 
 Add the following **delegated** Microsoft Graph permissions and grant admin
-consent in the test tenant:
+consent in the test tenant. The SPA requests these incrementally per feature
+(see `web/src/auth/scopes.ts`), and the backend exchanges the user token for a
+Graph token via OBO using `.default` (see `server/src/graph/constants.ts`).
+
+Core scopes (required for sign-in and most journeys):
 
 - `User.Read`
+- `Directory.Read.All`
 - `Directory.ReadWrite.All`
+- `Application.Read.All`
 - `Application.ReadWrite.All`
+- `AppRoleAssignment.ReadWrite.All`
 - `EntitlementManagement.ReadWrite.All`
 - `LifecycleWorkflows.ReadWrite.All`
+- `Policy.Read.All`
 - `Policy.ReadWrite.ConditionalAccess`
-- `CustomSecAttributeAssignment.ReadWrite.All`
 - `CustomSecAttributeDefinition.ReadWrite.All`
+- `CustomSecAttributeAssignment.ReadWrite.All`
 - `AuditLog.Read.All`
+
+Agent Identity (preview) scopes — required for the Blueprint / Agent ID setup
+steps. These are still in preview in Entra; if they are not yet consentable in
+your tenant, the backend falls back to `.default` so the rest of the flow still
+works:
+
+- `AgentIdentityBlueprint.Create`
+- `AgentIdentityBlueprint.UpdateAuthProperties.All`
+- `AgentIdentityBlueprint.AddRemoveCreds.All`
+- `AgentIdentityBlueprintPrincipal.Create`
+
+> Note: `User.Read.All` is also used, but as an **application** role assigned
+> to the Agent Blueprint principal (inheritable to created Agent IDs) — not as
+> a delegated scope on this app registration.
 
 ## Flow
 
