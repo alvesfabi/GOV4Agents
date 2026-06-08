@@ -4,7 +4,7 @@
  */
 export const Scopes: Record<string, string[]> = {
   signIn: ['User.Read', 'AppRoleAssignment.ReadWrite.All'],
-  directoryRead: ['Directory.Read.All'],
+  groupReadWrite: ['Group.ReadWrite.All'],
   agentBlueprint: ['Application.ReadWrite.All', 'Directory.ReadWrite.All', 'AppRoleAssignment.ReadWrite.All'],
   agentId: ['Application.ReadWrite.All', 'Directory.ReadWrite.All', 'AppRoleAssignment.ReadWrite.All'],
   accessPackage: ['EntitlementManagement.ReadWrite.All'],

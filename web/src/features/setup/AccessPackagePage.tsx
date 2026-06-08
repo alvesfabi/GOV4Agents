@@ -20,12 +20,13 @@ export function AccessPackagePage() {
               just-in-time, governed permission elevation for an agent identity.
             </li>
             <li>
-              <strong>Access Package #2 — <code>Directory.Read.All</code> (Separation of
+              <strong>Access Package #2 — <code>Group.ReadWrite.All</code> (Separation of
               Duties).</strong> This package is declared <em>incompatible</em> with package
-              #1. We never expect it to be granted — its sole purpose is to prove that
-              Entitlement Management blocks the request at submission time when a requestor
-              already has (or has requested) the conflicting package. This is how you enforce
-              toxic-combination policies without relying on reviewer vigilance.
+              #1. An agent that reads group membership should never also be able to modify
+              it — that would be a privilege escalation vector (the agent could add itself to
+              security groups). Its sole purpose is to prove that Entitlement Management
+              blocks the request at submission time when a requestor already has (or has
+              requested) the conflicting package.
             </li>
           </ul>
           Both packages share the same assignment policy shape (open to users, service
@@ -78,10 +79,10 @@ export function AccessPackagePage() {
                     result.accessPackage2.displayName,
                   )}
                 >
-                  Open Directory.Read.All package in Entra (SoD: incompatible with Group.Read.All)
+                  Open Group.ReadWrite.All package in Entra (SoD: incompatible with Group.Read.All)
                 </PortalLink>
                 <PortalLink href={portal.myAccessRequest(result.accessPackage2.id)}>
-                  MyAccess request URL (Directory.Read.All)
+                  MyAccess request URL (Group.ReadWrite.All)
                 </PortalLink>
               </div>
             )}

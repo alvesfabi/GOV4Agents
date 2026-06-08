@@ -307,7 +307,7 @@ setupRouter.post('/access-package', async (req: Req, res) => {
     const createAp = async (params: {
       displayName: string;
       description: string;
-      permissionName: 'Group.Read.All' | 'Directory.Read.All';
+      permissionName: 'Group.Read.All' | 'Group.ReadWrite.All';
       policyDisplayName: string;
     }) => {
       const permissionId = GRAPH_DELEGATED_PERMISSIONS[params.permissionName];
@@ -426,13 +426,13 @@ setupRouter.post('/access-package', async (req: Req, res) => {
       policyDisplayName: `Agents — sponsor requested (Group.Read.All) ${suffix}`,
     });
 
-    // 3e. Second access package — Directory.Read.All (incompatible with ap1)
+    // 3e. Second access package — Group.ReadWrite.All (incompatible with ap1)
     const ap2 = await createAp({
-      displayName: `Agent — Directory.Read.All ${suffix}`,
+      displayName: `Agent — Group.ReadWrite.All ${suffix}`,
       description:
-        'Grants Directory.Read.All to agents on demand. Incompatible with the Group.Read.All package (Separation of Duties).',
-      permissionName: 'Directory.Read.All',
-      policyDisplayName: `Agents — sponsor requested (Directory.Read.All) ${suffix}`,
+        'Grants Group.ReadWrite.All to agents on demand. Incompatible with the Group.Read.All package (Separation of Duties): an agent that reads group membership should not also be able to modify it.',
+      permissionName: 'Group.ReadWrite.All',
+      policyDisplayName: `Agents — sponsor requested (Group.ReadWrite.All) ${suffix}`,
     });
 
     // 3f. Separation of Duties — declare ap1 as incompatible with ap2 so any

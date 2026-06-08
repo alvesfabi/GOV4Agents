@@ -298,7 +298,7 @@ export function GovernPage() {
         <Body1>
           Now that the agent has an active assignment (or open request) for the{' '}
           <strong>Group.Read.All</strong> access package, try to request the second access
-          package <strong>{summary?.accessPackage2?.name ?? 'Directory.Read.All'}</strong> from
+          package <strong>{summary?.accessPackage2?.name ?? 'Group.ReadWrite.All'}</strong> from
           MyAccess <em>as the sponsor, on behalf of the agent</em>. The request will be{' '}
           <strong>blocked by the Separation of Duties rule</strong> we configured: the second
           package was declared incompatible with the first, so a requestor that already has (or

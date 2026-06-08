@@ -102,7 +102,7 @@ export function SummaryPage() {
           missingTo="/setup"
         />
         <ResourceCard
-          title="Access Package (Directory.Read.All — SoD)"
+          title="Access Package (Group.ReadWrite.All — SoD)"
           ready={Boolean(summary.accessPackage2)}
           name={summary.accessPackage2?.name}
           id={summary.accessPackage2?.id}
