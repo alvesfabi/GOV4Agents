@@ -13,6 +13,9 @@ export function LcwPage() {
           co-sponsors, then transfers all of the user's agent sponsorships to their manager.
         </>
       }
+      fields={[
+        { name: 'name', label: 'Workflow name', defaultPrefix: 'Offboard agent sponsors ', required: true },
+      ]}
       endpoint="/api/setup/lcw"
       submitLabel="Create workflow"
       renderResult={(r) => {

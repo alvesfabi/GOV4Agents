@@ -34,6 +34,7 @@ export function AccessPackagePage() {
         </>
       }
       fields={[
+        { name: 'name', label: 'Catalog name', defaultPrefix: 'GOV4Agents Catalog ', required: true },
         {
           name: 'approverUpn',
           label: 'Approver UPN',

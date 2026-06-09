@@ -243,14 +243,14 @@ setupRouter.post('/agent', async (req: Req, res) => {
 
 setupRouter.post('/access-package', async (req: Req, res) => {
   try {
-    const { approverUpn } = req.body ?? {};
+    const { approverUpn, name } = req.body ?? {};
     if (!approverUpn) return res.status(400).json({ error: 'approverUpn required' });
     const g = new GraphClient(req.userAccessToken!);
 
     const suffix = getSuffix(req);
 
     // 3a. Catalog (idempotent: reuse if a catalog with this name already exists)
-    const CATALOG_NAME = `GOV4Agents Catalog ${suffix}`;
+    const CATALOG_NAME = name || `GOV4Agents Catalog ${suffix}`;
     const existingCatalog = await g.call<{ value: Array<{ id: string; displayName: string }> }>(
       GraphScopes.entitlement,
       `/identityGovernance/entitlementManagement/catalogs?$filter=displayName eq '${CATALOG_NAME}'&$select=id,displayName`,
@@ -518,8 +518,10 @@ const LCW_TASKS = {
 
 setupRouter.post('/lcw', async (req: Req, res) => {
   try {
+    const { name } = req.body ?? {};
     const g = new GraphClient(req.userAccessToken!);
     const suffix = getSuffix(req);
+    const wfDisplayName = name || `Offboard agent sponsors ${suffix}`;
     const wf = await g.call<{ id: string; displayName: string }>(
       GraphScopes.lcw,
       '/identityGovernance/lifecycleWorkflows/workflows',
@@ -527,7 +529,7 @@ setupRouter.post('/lcw', async (req: Req, res) => {
         method: 'POST',
         body: {
           category: 'leaver',
-          displayName: `Offboard agent sponsors ${suffix}`,
+          displayName: wfDisplayName,
           description: 'Execute sponsorship transition tasks when an agent sponsor leaves',
           isEnabled: true,
           isSchedulingEnabled: true,
@@ -569,22 +571,42 @@ setupRouter.post('/lcw', async (req: Req, res) => {
 // 5. Custom security attribute + Conditional Access policy
 // ---------------------------------------------------------------------------
 
-setupRouter.post('/csa-and-ca', async (req: Req, res) => {
+// List existing custom security attribute sets so the UI can offer reusing one
+// (lets a set-scoped admin run Step 5 without directory-wide CSA roles).
+setupRouter.get('/attribute-sets', async (req: Req, res) => {
   try {
     const g = new GraphClient(req.userAccessToken!);
+    const data = await g.call<{ value: Array<{ id: string; description?: string }> }>(
+      GraphScopes.csaDefinition,
+      '/directory/attributeSets?$select=id,description',
+    );
+    return res.json({ ok: true, sets: data.value ?? [] });
+  } catch (err) {
+    return failure(res, err);
+  }
+});
+
+setupRouter.post('/csa-and-ca', async (req: Req, res) => {
+  try {
+    const { name, existingSetName } = req.body ?? {};
+    const g = new GraphClient(req.userAccessToken!);
     const suffix = getSuffix(req);
-    const setName = `AgentsCSA${suffix}`;
+    const usingExistingSet = Boolean(existingSetName && String(existingSetName).trim());
+    const setName = usingExistingSet ? String(existingSetName).trim() : `AgentsCSA${suffix}`;
     const attributeName = `TAG${suffix}`;
 
-    // Try to create the attribute set; if it already exists Graph returns 409
-    // and we can move on.
-    await ensureCreated(
-      g.call(GraphScopes.csaDefinition, '/directory/attributeSets', {
-        method: 'POST',
-        body: { id: setName, description: 'Custom attributes for agent governance', maxAttributesPerSet: 10 },
-        expectStatuses: [409],
-      }),
-    );
+    // Create the attribute set only when not reusing an existing one. Creating
+    // a new set requires the directory-scoped Attribute Definition Administrator
+    // role; reusing one only needs that role scoped to the chosen set.
+    if (!usingExistingSet) {
+      await ensureCreated(
+        g.call(GraphScopes.csaDefinition, '/directory/attributeSets', {
+          method: 'POST',
+          body: { id: setName, description: 'Custom attributes for agent governance', maxAttributesPerSet: 10 },
+          expectStatuses: [409],
+        }),
+      );
+    }
 
     // Create the TAG attribute on the set with allowed values approved/notApproved.
     await ensureCreated(
@@ -612,7 +634,7 @@ setupRouter.post('/csa-and-ca', async (req: Req, res) => {
     // principals filtered by the CSA we just created. Excluded = those with
     // CSA.TAG = "approved"; included = everything else (default deny).
     const caBody = {
-      displayName: `Default deny agents except approved (Agent ID only) ${suffix}`,
+      displayName: name || `Default deny agents except approved (Agent ID only) ${suffix}`,
       state: 'enabledForReportingButNotEnforced',
       conditions: {
         userRiskLevels: [],
@@ -670,7 +692,7 @@ setupRouter.post('/csa-and-ca', async (req: Req, res) => {
       caPolicy: { id: policy.id, displayName: policy.displayName },
     });
 
-    return res.json({ ok: true, csa: { setName, attributeName }, caPolicy: policy });
+    return res.json({ ok: true, csa: { setName, attributeName, usingExistingSet }, caPolicy: policy });
   } catch (err) {
     return failure(res, err);
   }

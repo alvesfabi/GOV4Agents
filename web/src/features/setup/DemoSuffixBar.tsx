@@ -15,7 +15,7 @@ import { useDemoSuffix } from './DemoSuffixContext';
 const useStyles = makeStyles({
   bar: {
     display: 'flex',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     gap: '12px',
     padding: '12px 16px',
     backgroundColor: tokens.colorNeutralBackground2,
