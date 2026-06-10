@@ -1,6 +1,7 @@
 import { SetupStepPage } from './SetupStepPage';
 import { PortalLink } from '../../components/Links';
 import { portal } from '../../lib/portalLinks';
+import { personas } from '../../config/personas';
 
 export function BlueprintPage() {
   return (
@@ -19,7 +20,8 @@ export function BlueprintPage() {
         {
           name: 'sponsorUpn',
           label: 'Sponsor UPN',
-          helper: 'User principal name of the user who will sponsor this blueprint',
+          helper: `User principal name of the user who will sponsor this blueprint (default: ${personas.sponsor.displayName})`,
+          defaultValue: personas.sponsor.upn,
           required: true,
         },
       ]}

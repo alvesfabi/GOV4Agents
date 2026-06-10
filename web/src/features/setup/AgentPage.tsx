@@ -1,6 +1,7 @@
 import { SetupStepPage } from './SetupStepPage';
 import { PortalLink } from '../../components/Links';
 import { portal } from '../../lib/portalLinks';
+import { personas } from '../../config/personas';
 
 export function AgentPage() {
   return (
@@ -18,7 +19,8 @@ export function AgentPage() {
         {
           name: 'sponsorUpn',
           label: 'Sponsor UPN',
-          helper: 'User principal name of the user who will sponsor this agent',
+          helper: `User principal name of the user who will sponsor this agent (default: ${personas.sponsor.displayName})`,
+          defaultValue: personas.sponsor.upn,
           required: true,
         },
       ]}

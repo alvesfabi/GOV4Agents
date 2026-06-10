@@ -72,6 +72,27 @@ VITE_CLIENT_ID=<app-clientId>
 VITE_AUTHORITY=https://login.microsoftonline.com/common
 ```
 
+### Demo personas (optional)
+
+The setup steps pre-fill the sponsor and approver UPN fields with
+representative human identities so the demo reads naturally. Defaults target
+the standard Microsoft 365 demo content-pack users (Adele Vance / Megan Bowen /
+Miriam Graham). Override them per tenant in `web/.env.local`:
+
+```
+VITE_SPONSOR_UPN=AdeleV@<tenant>.onmicrosoft.com
+VITE_SPONSOR_NAME=Adele Vance
+VITE_APPROVER_UPN=MeganB@<tenant>.onmicrosoft.com
+VITE_APPROVER_NAME=Megan Bowen
+VITE_MANAGER_UPN=MiriamG@<tenant>.onmicrosoft.com
+VITE_MANAGER_NAME=Miriam Graham
+```
+
+The sponsor must have a `manager` set in Entra for the Lifecycle Workflow
+offboarding demo to transfer sponsorships; the manager persona above should be
+that user. These users do not need M365 licenses for a portal-driven demo —
+approvals and requests are completed in MyAccess.
+
 ### 4. API permissions
 
 Add the following **delegated** Microsoft Graph permissions and grant admin

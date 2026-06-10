@@ -1,6 +1,7 @@
 import { SetupStepPage } from './SetupStepPage';
 import { PortalLink } from '../../components/Links';
 import { portal } from '../../lib/portalLinks';
+import { personas } from '../../config/personas';
 
 export function AccessPackagePage() {
   return (
@@ -38,7 +39,8 @@ export function AccessPackagePage() {
         {
           name: 'approverUpn',
           label: 'Approver UPN',
-          helper: 'Email of the user who will approve access requests for this package',
+          helper: `Email of the user who will approve access requests for this package (default: ${personas.approver.displayName})`,
+          defaultValue: personas.approver.upn,
           required: true,
         },
       ]}
