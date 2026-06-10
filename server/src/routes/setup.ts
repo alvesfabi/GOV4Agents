@@ -53,33 +53,53 @@ setupRouter.post('/blueprint', async (req: Req, res) => {
       `/users/${encodeURIComponent(sponsorUpn)}?$select=id,userPrincipalName`,
     );
 
+    // Reuse an existing blueprint with the same name if present, so re-running
+    // setup against the same environment name does not create duplicates.
+    const existingBp = await g.call<{
+      value: Array<{ id: string; displayName: string; appId: string }>;
+    }>(
+      GraphScopes.apps,
+      `/applications/microsoft.graph.agentIdentityBlueprint?$filter=displayName eq '${encodeURIComponent(
+        name,
+      ).replace(/'/g, "''")}'&$select=id,displayName,appId`,
+      { version: 'beta' },
+    ).catch(() => ({ value: [] as Array<{ id: string; displayName: string; appId: string }> }));
+
     // Create the blueprint. The signed-in user is auto-added as owner.
     // sponsors must be specified at creation time.
-    const blueprint = await g.call<{ id: string; displayName: string; appId: string }>(
-      GraphScopes.apps,
-      '/applications/microsoft.graph.agentIdentityBlueprint',
-      {
-        method: 'POST',
-        version: 'beta',
-        body: {
-          displayName: name,
-          'sponsors@odata.bind': [`https://graph.microsoft.com/beta/users/${sponsor.id}`],
+    const blueprint =
+      existingBp.value[0] ??
+      (await g.call<{ id: string; displayName: string; appId: string }>(
+        GraphScopes.apps,
+        '/applications/microsoft.graph.agentIdentityBlueprint',
+        {
+          method: 'POST',
+          version: 'beta',
+          body: {
+            displayName: name,
+            'sponsors@odata.bind': [`https://graph.microsoft.com/beta/users/${sponsor.id}`],
+          },
         },
-      },
-    );
+      ));
 
     // Create the blueprint **principal** (the service principal that backs
-    // this blueprint). Without this, agent identities cannot be created from
-    // the blueprint.
-    const blueprintPrincipal = await g.call<{ id: string; appId: string }>(
+    // this blueprint), reusing it if it already exists for this appId. Without
+    // it, agent identities cannot be created from the blueprint.
+    const existingBpPrincipal = await g.call<{ value: Array<{ id: string; appId: string }> }>(
       GraphScopes.apps,
-      '/servicePrincipals/microsoft.graph.agentIdentityBlueprintPrincipal',
-      {
-        method: 'POST',
-        version: 'beta',
-        body: { appId: blueprint.appId },
-      },
-    );
+      `/servicePrincipals?$filter=appId eq '${blueprint.appId}'&$select=id,appId`,
+    ).catch(() => ({ value: [] as Array<{ id: string; appId: string }> }));
+    const blueprintPrincipal =
+      existingBpPrincipal.value[0] ??
+      (await g.call<{ id: string; appId: string }>(
+        GraphScopes.apps,
+        '/servicePrincipals/microsoft.graph.agentIdentityBlueprintPrincipal',
+        {
+          method: 'POST',
+          version: 'beta',
+          body: { appId: blueprint.appId },
+        },
+      ));
 
     // Resolve the Microsoft Graph service principal so we can grant
     // User.Read.All to the blueprint principal directly. Inheritable
@@ -123,26 +143,30 @@ setupRouter.post('/blueprint', async (req: Req, res) => {
 
     // Configure inheritable permissions on the blueprint: agents inherit all
     // app roles the principal has (currently just User.Read.All) and no
-    // delegated scopes. Path/body per
+    // delegated scopes. Tolerant of re-runs (already configured). Path/body per
     // https://learn.microsoft.com/entra/agent-id/configure-inheritable-permissions-blueprints
-    await g.call(
-      GraphScopes.apps,
-      `/applications/microsoft.graph.agentIdentityBlueprint/${blueprint.id}/inheritablePermissions`,
-      {
-        method: 'POST',
-        body: {
-          resourceAppId: MICROSOFT_GRAPH_APP_ID,
-          inheritableScopes: {
-            '@odata.type': '#microsoft.graph.noScopes',
-            kind: 'none',
-          },
-          inheritableRoles: {
-            '@odata.type': '#microsoft.graph.allAllowedRoles',
-            kind: 'allAllowed',
+    try {
+      await g.call(
+        GraphScopes.apps,
+        `/applications/microsoft.graph.agentIdentityBlueprint/${blueprint.id}/inheritablePermissions`,
+        {
+          method: 'POST',
+          body: {
+            resourceAppId: MICROSOFT_GRAPH_APP_ID,
+            inheritableScopes: {
+              '@odata.type': '#microsoft.graph.noScopes',
+              kind: 'none',
+            },
+            inheritableRoles: {
+              '@odata.type': '#microsoft.graph.allAllowedRoles',
+              kind: 'allAllowed',
+            },
           },
         },
-      },
-    );
+      );
+    } catch (err) {
+      if (!isAlreadyExistsError(err)) throw err;
+    }
 
     // Add a client secret on the blueprint's application object. Per the
     // agent identity preview, credentials cannot be added to agent service
@@ -191,23 +215,50 @@ setupRouter.post('/agent', async (req: Req, res) => {
       `/users/${encodeURIComponent(sponsorUpn)}?$select=id,userPrincipalName`,
     );
 
+    // Reuse an existing agent identity with the same name (and linked to this
+    // blueprint) if present, so re-running setup does not create duplicates.
+    const existingAgent = await g.call<{
+      value: Array<{
+        id: string;
+        appId: string;
+        displayName: string;
+        agentIdentityBlueprintId: string;
+      }>;
+    }>(
+      GraphScopes.apps,
+      `/servicePrincipals/microsoft.graph.agentIdentity?$filter=displayName eq '${encodeURIComponent(
+        name,
+      ).replace(/'/g, "''")}'&$select=id,appId,displayName,agentIdentityBlueprintId`,
+      { version: 'beta' },
+    ).catch(() => ({
+      value: [] as Array<{
+        id: string;
+        appId: string;
+        displayName: string;
+        agentIdentityBlueprintId: string;
+      }>,
+    }));
+
     // Create the agent identity (a specialized servicePrincipal). The signed-in
     // user is auto-added as owner. Credentials are inherited from the
     // blueprint — agents themselves cannot hold passwordCredentials.
-    const agent = await g.call<{
-      id: string;
-      appId: string;
-      displayName: string;
-      agentIdentityBlueprintId: string;
-    }>(GraphScopes.apps, '/servicePrincipals/microsoft.graph.agentIdentity', {
-      method: 'POST',
-      version: 'beta',
-      body: {
-        displayName: name,
-        agentIdentityBlueprintId: blueprint.id,
-        'sponsors@odata.bind': [`https://graph.microsoft.com/beta/users/${sponsor.id}`],
-      },
-    });
+    const agent =
+      existingAgent.value.find((a) => a.agentIdentityBlueprintId === blueprint.id) ??
+      existingAgent.value[0] ??
+      (await g.call<{
+        id: string;
+        appId: string;
+        displayName: string;
+        agentIdentityBlueprintId: string;
+      }>(GraphScopes.apps, '/servicePrincipals/microsoft.graph.agentIdentity', {
+        method: 'POST',
+        version: 'beta',
+        body: {
+          displayName: name,
+          agentIdentityBlueprintId: blueprint.id,
+          'sponsors@odata.bind': [`https://graph.microsoft.com/beta/users/${sponsor.id}`],
+        },
+      }));
 
     setSession(req.sessionId!, {
       agent: {
@@ -302,8 +353,7 @@ setupRouter.post('/access-package', async (req: Req, res) => {
         },
       );
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (!/already|conflict/i.test(msg)) throw err;
+      if (!isAlreadyExistsError(err)) throw err;
     }
 
     // Wait for the catalog resource entry to materialize (async).
@@ -332,46 +382,60 @@ setupRouter.post('/access-package', async (req: Req, res) => {
     }) => {
       const permissionId = GRAPH_DELEGATED_PERMISSIONS[params.permissionName];
 
-      const ap = await g.call<{ id: string; displayName: string }>(
+      // Reuse an existing access package with the same name if present.
+      const existingAp = await g.call<{ value: Array<{ id: string; displayName: string }> }>(
         GraphScopes.entitlement,
-        '/identityGovernance/entitlementManagement/accessPackages',
-        {
-          method: 'POST',
-          body: {
-            displayName: params.displayName,
-            description: params.description,
-            catalog: { id: catalog.id },
-            isHidden: false,
+        `/identityGovernance/entitlementManagement/accessPackages?$filter=displayName eq '${params.displayName.replace(
+          /'/g,
+          "''",
+        )}'&$select=id,displayName`,
+      ).catch(() => ({ value: [] as Array<{ id: string; displayName: string }> }));
+      const ap =
+        existingAp.value[0] ??
+        (await g.call<{ id: string; displayName: string }>(
+          GraphScopes.entitlement,
+          '/identityGovernance/entitlementManagement/accessPackages',
+          {
+            method: 'POST',
+            body: {
+              displayName: params.displayName,
+              description: params.description,
+              catalog: { id: catalog.id },
+              isHidden: false,
+            },
           },
-        },
-      );
+        ));
 
-      await g.call(
-        GraphScopes.entitlement,
-        `/identityGovernance/entitlementManagement/accessPackages/${ap.id}/resourceRoleScopes`,
-        {
-          method: 'POST',
-          body: {
-            role: {
-              displayName: params.permissionName,
-              originId: permissionId,
-              originSystem: 'OauthApplication',
-              resource: {
-                id: graphCatalogResourceId,
+      try {
+        await g.call(
+          GraphScopes.entitlement,
+          `/identityGovernance/entitlementManagement/accessPackages/${ap.id}/resourceRoleScopes`,
+          {
+            method: 'POST',
+            body: {
+              role: {
+                displayName: params.permissionName,
+                originId: permissionId,
+                originSystem: 'OauthApplication',
+                resource: {
+                  id: graphCatalogResourceId,
+                  originId: MICROSOFT_GRAPH_APP_ID,
+                  originSystem: 'OauthApplication',
+                },
+              },
+              scope: {
+                displayName: 'Root',
+                description: 'Root Scope',
                 originId: MICROSOFT_GRAPH_APP_ID,
                 originSystem: 'OauthApplication',
+                isRootScope: true,
               },
             },
-            scope: {
-              displayName: 'Root',
-              description: 'Root Scope',
-              originId: MICROSOFT_GRAPH_APP_ID,
-              originSystem: 'OauthApplication',
-              isRootScope: true,
-            },
           },
-        },
-      );
+        );
+      } catch (err) {
+        if (!isAlreadyExistsError(err)) throw err;
+      }
 
       const policyBody = {
         displayName: params.policyDisplayName,
@@ -422,11 +486,19 @@ setupRouter.post('/access-package', async (req: Req, res) => {
         notificationSettings: { isAssignmentNotificationDisabled: false },
       };
 
-      const policy = await g.call<{ id: string; displayName: string }>(
+      // Reuse an existing assignment policy for this access package with the
+      // same name if present, so re-running setup does not duplicate policies.
+      const existingPolicies = await g.call<{ value: Array<{ id: string; displayName: string }> }>(
         GraphScopes.entitlement,
-        '/identityGovernance/entitlementManagement/assignmentPolicies',
-        { method: 'POST', body: policyBody },
-      );
+        `/identityGovernance/entitlementManagement/assignmentPolicies?$filter=accessPackage/id eq '${ap.id}'&$select=id,displayName`,
+      ).catch(() => ({ value: [] as Array<{ id: string; displayName: string }> }));
+      const policy =
+        existingPolicies.value.find((p) => p.displayName === params.policyDisplayName) ??
+        (await g.call<{ id: string; displayName: string }>(
+          GraphScopes.entitlement,
+          '/identityGovernance/entitlementManagement/assignmentPolicies',
+          { method: 'POST', body: policyBody },
+        ));
 
       // PUT re-index workaround so "Requesting for Sponsored agent" appears.
       // This is best-effort — a 504 here doesn't mean the policy failed.
@@ -462,16 +534,20 @@ setupRouter.post('/access-package', async (req: Req, res) => {
 
     // 3f. Separation of Duties — declare ap1 as incompatible with ap2 so any
     // agent already assigned to ap1 (or with an open request) cannot request ap2.
-    await g.call(
-      GraphScopes.entitlement,
-      `/identityGovernance/entitlementManagement/accessPackages/${ap2.ap.id}/incompatibleAccessPackages/$ref`,
-      {
-        method: 'POST',
-        body: {
-          '@odata.id': `https://graph.microsoft.com/v1.0/identityGovernance/entitlementManagement/accessPackages/${ap1.ap.id}`,
+    try {
+      await g.call(
+        GraphScopes.entitlement,
+        `/identityGovernance/entitlementManagement/accessPackages/${ap2.ap.id}/incompatibleAccessPackages/$ref`,
+        {
+          method: 'POST',
+          body: {
+            '@odata.id': `https://graph.microsoft.com/v1.0/identityGovernance/entitlementManagement/accessPackages/${ap1.ap.id}`,
+          },
         },
-      },
-    );
+      );
+    } catch (err) {
+      if (!isAlreadyExistsError(err)) throw err;
+    }
 
     setSession(req.sessionId!, {
       catalog: { id: catalog.id, name: catalog.displayName },
@@ -522,43 +598,56 @@ setupRouter.post('/lcw', async (req: Req, res) => {
     const g = new GraphClient(req.userAccessToken!);
     const suffix = getSuffix(req);
     const wfDisplayName = name || `Offboard agent sponsors ${suffix}`;
-    const wf = await g.call<{ id: string; displayName: string }>(
+
+    // Reuse an existing workflow with the same name if present, so re-running
+    // setup does not create duplicate lifecycle workflows.
+    const existingWf = await g.call<{ value: Array<{ id: string; displayName: string }> }>(
       GraphScopes.lcw,
-      '/identityGovernance/lifecycleWorkflows/workflows',
-      {
-        method: 'POST',
-        body: {
-          category: 'leaver',
-          displayName: wfDisplayName,
-          description: 'Execute sponsorship transition tasks when an agent sponsor leaves',
-          isEnabled: true,
-          isSchedulingEnabled: true,
-          executionConditions: {
-            '@odata.type': '#microsoft.graph.identityGovernance.triggerAndScopeBasedConditions',
-            scope: {
-              '@odata.type': '#microsoft.graph.identityGovernance.ruleBasedSubjectSet',
-              rule: '(accountEnabled eq true)',
+      `/identityGovernance/lifecycleWorkflows/workflows?$filter=displayName eq '${wfDisplayName.replace(
+        /'/g,
+        "''",
+      )}'&$select=id,displayName`,
+    ).catch(() => ({ value: [] as Array<{ id: string; displayName: string }> }));
+
+    const wf =
+      existingWf.value[0] ??
+      (await g.call<{ id: string; displayName: string }>(
+        GraphScopes.lcw,
+        '/identityGovernance/lifecycleWorkflows/workflows',
+        {
+          method: 'POST',
+          body: {
+            category: 'leaver',
+            displayName: wfDisplayName,
+            description: 'Execute sponsorship transition tasks when an agent sponsor leaves',
+            isEnabled: true,
+            isSchedulingEnabled: true,
+            executionConditions: {
+              '@odata.type': '#microsoft.graph.identityGovernance.triggerAndScopeBasedConditions',
+              scope: {
+                '@odata.type': '#microsoft.graph.identityGovernance.ruleBasedSubjectSet',
+                rule: '(accountEnabled eq true)',
+              },
+              trigger: {
+                '@odata.type': '#microsoft.graph.identityGovernance.timeBasedAttributeTrigger',
+                timeBasedAttribute: 'employeeLeaveDateTime',
+                offsetInDays: 0,
+              },
             },
-            trigger: {
-              '@odata.type': '#microsoft.graph.identityGovernance.timeBasedAttributeTrigger',
-              timeBasedAttribute: 'employeeLeaveDateTime',
-              offsetInDays: 0,
-            },
+            tasks: [
+              {
+                category: 'leaver',
+                continueOnError: false,
+                description: 'Transfer agent sponsorships to manager',
+                displayName: 'Transfer agent sponsorships to manager',
+                isEnabled: true,
+                taskDefinitionId: LCW_TASKS.transferAgentSponsorshipsToManager,
+                arguments: [],
+              },
+            ],
           },
-          tasks: [
-            {
-              category: 'leaver',
-              continueOnError: false,
-              description: 'Transfer agent sponsorships to manager',
-              displayName: 'Transfer agent sponsorships to manager',
-              isEnabled: true,
-              taskDefinitionId: LCW_TASKS.transferAgentSponsorshipsToManager,
-              arguments: [],
-            },
-          ],
         },
-      },
-    );
+      ));
 
     setSession(req.sessionId!, { lcw: { id: wf.id, name: wf.displayName } });
     return res.json({ ok: true, lcw: wf });
@@ -687,11 +776,38 @@ setupRouter.post('/csa-and-ca', async (req: Req, res) => {
       sessionControls: null,
     };
 
-    const policy = await g.call<{ id: string; displayName: string }>(
+    // Reuse an existing CA policy with the same name if present (and PATCH it
+    // back to the demo body), so re-running setup does not create duplicates.
+    const caDisplayName = caBody.displayName;
+    const existingPolicies = await g.call<{ value: Array<{ id: string; displayName: string }> }>(
       GraphScopes.conditionalAccess,
-      '/identity/conditionalAccess/policies',
-      { method: 'POST', body: caBody, version: 'beta' },
-    );
+      `/identity/conditionalAccess/policies?$filter=displayName eq '${caDisplayName.replace(
+        /'/g,
+        "''",
+      )}'&$select=id,displayName`,
+      { version: 'beta' },
+    ).catch(() => ({ value: [] as Array<{ id: string; displayName: string }> }));
+
+    let policy: { id: string; displayName: string };
+    if (existingPolicies.value[0]) {
+      policy = existingPolicies.value[0];
+      // Re-apply the full demo body, including state. Re-running setup means
+      // "reset to baseline", and the baseline is report-only — the Protect
+      // journey is what turns the policy on later. This guarantees Govern Step
+      // 1 works (the agent is not yet TAG=approved, so an enforced policy would
+      // block its token issuance with AADSTS53003).
+      await g.call(
+        GraphScopes.conditionalAccess,
+        `/identity/conditionalAccess/policies/${policy.id}`,
+        { method: 'PATCH', body: caBody, version: 'beta' },
+      );
+    } else {
+      policy = await g.call<{ id: string; displayName: string }>(
+        GraphScopes.conditionalAccess,
+        '/identity/conditionalAccess/policies',
+        { method: 'POST', body: caBody, version: 'beta' },
+      );
+    }
 
     setSession(req.sessionId!, {
       csa: { setName, attributeName },
@@ -721,33 +837,6 @@ setupRouter.post('/manual-session', (req: Req, res) => {
   const patch = req.body ?? {};
   setSession(req.sessionId!, patch);
   res.json({ ok: true, session: req.sessionData });
-});
-
-// Non-secret snapshot of the whole session, used by the SPA to persist the
-// demo context in the browser (localStorage) so it can be restored after a
-// server restart via /manual-session. Client secrets are stripped: they are
-// intentionally never returned to the browser.
-setupRouter.get('/session-context', (req: Req, res) => {
-  const s = req.sessionData ?? {};
-  const strip = <T extends { clientSecret?: string }>(o: T | undefined) => {
-    if (!o) return o;
-    const { clientSecret: _drop, ...rest } = o;
-    return rest;
-  };
-  res.json({
-    ok: true,
-    context: {
-      demoSuffix: s.demoSuffix,
-      blueprint: strip(s.blueprint),
-      agent: strip(s.agent),
-      catalog: s.catalog,
-      accessPackage: s.accessPackage,
-      accessPackage2: s.accessPackage2,
-      lcw: s.lcw,
-      csa: s.csa,
-      caPolicy: s.caPolicy,
-    },
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -799,6 +888,18 @@ setupRouter.post('/agent/token', async (req: Req, res) => {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+// Detects Graph errors that mean "the thing already exists" so setup steps can
+// be re-run idempotently. Checks both the GraphError body code and the message.
+function isAlreadyExistsError(err: unknown): boolean {
+  if (err instanceof GraphError) {
+    if (err.status === 409) return true;
+    const code = (err.body as { error?: { code?: string } } | undefined)?.error?.code ?? '';
+    if (/already|conflict|exist|onboarded|duplicate/i.test(code)) return true;
+  }
+  const msg = err instanceof Error ? err.message : String(err);
+  return /already|conflict|onboarded/i.test(msg);
+}
 
 function failure(res: import('express').Response, err: unknown): void {
   if (err instanceof GraphError) {

@@ -1,6 +1,5 @@
 import { useApiToken } from '../auth/useApiToken';
 import { getSessionId } from '../auth/sessionId';
-import { syncContextToLocal } from '../auth/sessionContext';
 
 export class ApiError extends Error {
   status: number;
@@ -36,16 +35,6 @@ export function useApi() {
     const body = text ? safeJson(text) : undefined;
     if (!res.ok) {
       throw new ApiError(res.status, body, `API ${res.status}: ${res.statusText}`);
-    }
-    // After a successful setup mutation, snapshot the (non-secret) context to
-    // localStorage so the demo can be resumed after a server restart.
-    const method = (init.method ?? 'GET').toUpperCase();
-    if (
-      method === 'POST' &&
-      path.startsWith('/api/setup/') &&
-      !path.endsWith('/manual-session')
-    ) {
-      void syncContextToLocal(token);
     }
     return body as T;
   };

@@ -2,7 +2,6 @@ import { AuthenticatedTemplate, UnauthenticatedTemplate } from '@azure/msal-reac
 import { Body1, Title3, makeStyles, tokens } from '@fluentui/react-components';
 import { AuthBar } from './auth/AuthBar';
 import { AppRoutes } from './routes/AppRoutes';
-import { SessionGate } from './components/SessionGate';
 import { Page, PageHero, Card } from './components/PageLayout';
 
 const useStyles = makeStyles({
@@ -29,9 +28,7 @@ export default function App() {
   return (
     <>
       <AuthenticatedTemplate>
-        <SessionGate>
-          <AppRoutes />
-        </SessionGate>
+        <AppRoutes />
       </AuthenticatedTemplate>
       <UnauthenticatedTemplate>
         <div className={styles.splash}>

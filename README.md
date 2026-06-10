@@ -76,23 +76,39 @@ VITE_AUTHORITY=https://login.microsoftonline.com/common
 
 The setup steps pre-fill the sponsor and approver UPN fields with
 representative human identities so the demo reads naturally. Defaults target
-dedicated, fully-licensed demo accounts in the test tenant (EntraAgentID Demo1
-/ Demo2 / Demo3). Override them per tenant in `web/.env.local`:
+dedicated, fully-licensed demo accounts in the test tenant (display names
+`demo_sponsor` / `demo_approver` / `demo_manager`, UPNs `EntraAgentIDDemo1/2/3`).
+Resolution is by **UPN**, so renaming the accounts' display names in Entra does
+not affect the demo — only the UPN matters. Override them per tenant in
+`web/.env.local`:
 
 ```
 VITE_SPONSOR_UPN=EntraAgentIDDemo1@<tenant>.onmicrosoft.com
-VITE_SPONSOR_NAME=EntraAgentID Demo1
+VITE_SPONSOR_NAME=demo_sponsor
 VITE_APPROVER_UPN=EntraAgentIDDemo2@<tenant>.onmicrosoft.com
-VITE_APPROVER_NAME=EntraAgentID Demo2
+VITE_APPROVER_NAME=demo_approver
 VITE_MANAGER_UPN=EntraAgentIDDemo3@<tenant>.onmicrosoft.com
-VITE_MANAGER_NAME=EntraAgentID Demo3
+VITE_MANAGER_NAME=demo_manager
 ```
 
 The sponsor must have a `manager` set in Entra for the Lifecycle Workflow
 offboarding demo to transfer sponsorships; set the sponsor's manager to the
-manager persona above (e.g. Demo1 → Demo3). These accounts are used to sign in
-to MyAccess during the demo, so make sure you can authenticate as them (reset
-password or issue a Temporary Access Pass).
+manager persona above (e.g. demo_sponsor → demo_manager). These accounts are
+used to sign in to MyAccess during the demo, so make sure you can authenticate
+as them (reset password or issue a Temporary Access Pass).
+
+To provision all three personas (and the sponsor→manager relationship) in a new
+tenant, run the helper script — it prints the `VITE_*` values to paste into
+`web/.env.local`:
+
+```powershell
+./scripts/New-DemoUsers.ps1            # uses the signed-in admin's domain
+./scripts/New-DemoUsers.ps1 -CreateGroup   # also makes a CA-exclusion group
+```
+
+The script is idempotent (looks up users by UPN, creates if missing) and uses
+device code flow with the `User.ReadWrite.All` scope (plus `Group.ReadWrite.All`
+when `-CreateGroup` is passed).
 
 ### 4. API permissions
 
