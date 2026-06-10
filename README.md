@@ -128,6 +128,21 @@ store (keyed by the `x-gov4-session` header sent by the SPA). It is never
 returned to the browser. The PoC is intended to be run locally; do not deploy
 the in-memory secret store to a multi-instance environment without changes.
 
+### Resuming a session
+
+The server session store is in-memory and is cleared whenever the API server
+restarts. To let you reopen the app and resume where you left off, the SPA
+persists a **non-secret** snapshot of the demo context (created resource ids,
+names, and the demo suffix) in the browser's `localStorage`, keyed by the
+session id (also stored in `localStorage`). On load the SPA rehydrates the
+server session from this snapshot via `POST /api/setup/manual-session`, so
+deep links and the Manage/Govern/Protect journeys keep working after a restart.
+
+Client secrets are deliberately excluded from the snapshot (they never leave
+the backend), so the agent client-credential token used in the Govern journey
+cannot be restored after a server restart — re-run the Agent ID setup step if
+you need it again.
+
 ## Scripts
 
 | Command | Description |

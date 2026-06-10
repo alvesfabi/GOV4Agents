@@ -102,7 +102,8 @@ export function ConditionalAccessPage() {
     }
   }
 
-  const newSetLabel = `Create a new set (AgentsCSA${suffix})`;
+  const safeSuffix = suffix.replace(/[^a-zA-Z0-9]/g, '');
+  const newSetLabel = `Create a new set (AgentsCSA${safeSuffix})`;
 
   return (
     <div className={styles.root}>

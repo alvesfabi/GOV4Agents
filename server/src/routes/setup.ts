@@ -591,9 +591,15 @@ setupRouter.post('/csa-and-ca', async (req: Req, res) => {
     const { name, existingSetName } = req.body ?? {};
     const g = new GraphClient(req.userAccessToken!);
     const suffix = getSuffix(req);
+    // Attribute set ids and attribute definition names must be alphanumeric
+    // (no spaces or special characters) and at most 32 characters. The demo
+    // suffix is free text used in display names, so strip it for CSA ids.
+    const safeSuffix = suffix.replace(/[^a-zA-Z0-9]/g, '');
     const usingExistingSet = Boolean(existingSetName && String(existingSetName).trim());
-    const setName = usingExistingSet ? String(existingSetName).trim() : `AgentsCSA${suffix}`;
-    const attributeName = `TAG${suffix}`;
+    const setName = usingExistingSet
+      ? String(existingSetName).trim()
+      : `AgentsCSA${safeSuffix}`.slice(0, 32);
+    const attributeName = `TAG${safeSuffix}`.slice(0, 32);
 
     // Create the attribute set only when not reusing an existing one. Creating
     // a new set requires the directory-scoped Attribute Definition Administrator
@@ -715,6 +721,33 @@ setupRouter.post('/manual-session', (req: Req, res) => {
   const patch = req.body ?? {};
   setSession(req.sessionId!, patch);
   res.json({ ok: true, session: req.sessionData });
+});
+
+// Non-secret snapshot of the whole session, used by the SPA to persist the
+// demo context in the browser (localStorage) so it can be restored after a
+// server restart via /manual-session. Client secrets are stripped: they are
+// intentionally never returned to the browser.
+setupRouter.get('/session-context', (req: Req, res) => {
+  const s = req.sessionData ?? {};
+  const strip = <T extends { clientSecret?: string }>(o: T | undefined) => {
+    if (!o) return o;
+    const { clientSecret: _drop, ...rest } = o;
+    return rest;
+  };
+  res.json({
+    ok: true,
+    context: {
+      demoSuffix: s.demoSuffix,
+      blueprint: strip(s.blueprint),
+      agent: strip(s.agent),
+      catalog: s.catalog,
+      accessPackage: s.accessPackage,
+      accessPackage2: s.accessPackage2,
+      lcw: s.lcw,
+      csa: s.csa,
+      caPolicy: s.caPolicy,
+    },
+  });
 });
 
 // ---------------------------------------------------------------------------
