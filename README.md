@@ -98,17 +98,19 @@ used to sign in to MyAccess during the demo, so make sure you can authenticate
 as them (reset password or issue a Temporary Access Pass).
 
 To provision all three personas (and the sponsor→manager relationship) in a new
-tenant, run the helper script — it prints the `VITE_*` values to paste into
-`web/.env.local`:
+tenant, run the helper script — it writes the `VITE_*` values straight into
+`web/.env.local` (creating it if needed, preserving other keys):
 
 ```powershell
 ./scripts/New-DemoUsers.ps1            # uses the signed-in admin's domain
 ./scripts/New-DemoUsers.ps1 -CreateGroup   # also makes a CA-exclusion group
+./scripts/New-DemoUsers.ps1 -SkipEnvFile   # just print the values, don't write
 ```
 
 The script is idempotent (looks up users by UPN, creates if missing) and uses
 device code flow with the `User.ReadWrite.All` scope (plus `Group.ReadWrite.All`
-when `-CreateGroup` is passed).
+when `-CreateGroup` is passed). Because the UPNs are tenant-specific, letting the
+script update `web/.env.local` saves you from editing them by hand.
 
 ### 4. API permissions
 

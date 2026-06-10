@@ -40,11 +40,40 @@ param(
     [switch]$CreateGroup,
     [string]$GroupName = "Demo Users",
     [switch]$ForcePasswordChange,
-    [switch]$ResetPassword
+    [switch]$ResetPassword,
+    [switch]$SkipEnvFile,
+    [string]$EnvPath = (Join-Path $PSScriptRoot "..\web\.env.local")
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+# Upserts KEY=value pairs into an env file, preserving any other lines.
+function Set-EnvValues {
+    param(
+        [string]$Path,
+        [System.Collections.Specialized.OrderedDictionary]$Values
+    )
+    $lines = @()
+    if (Test-Path $Path) { $lines = @(Get-Content -LiteralPath $Path) }
+
+    foreach ($key in $Values.Keys) {
+        $entry = "$key=$($Values[$key])"
+        $matched = $false
+        for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match "^\s*$([regex]::Escape($key))\s*=") {
+                $lines[$i] = $entry
+                $matched = $true
+                break
+            }
+        }
+        if (-not $matched) { $lines += $entry }
+    }
+
+    $dir = Split-Path -Parent $Path
+    if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    Set-Content -LiteralPath $Path -Value $lines -Encoding UTF8
+}
 
 # --- 0. Ensure required Microsoft.Graph modules are loaded ---
 $requiredModules = @(
@@ -182,21 +211,38 @@ if ($CreateGroup) {
 }
 
 # --- 7. Output configuration ---
-$sponsorUpn  = "demo_sponsor@$DomainName"
-$approverUpn = "demo_approver@$DomainName"
-$managerUpn  = "demo_manager@$DomainName"
+$sponsorUpn  = $created.sponsor.UserPrincipalName
+$approverUpn = $created.approver.UserPrincipalName
+$managerUpn  = $created.manager.UserPrincipalName
+
+$envValues = [ordered]@{
+    "VITE_SPONSOR_UPN"   = $sponsorUpn
+    "VITE_SPONSOR_NAME"  = $created.sponsor.DisplayName
+    "VITE_APPROVER_UPN"  = $approverUpn
+    "VITE_APPROVER_NAME" = $created.approver.DisplayName
+    "VITE_MANAGER_UPN"   = $managerUpn
+    "VITE_MANAGER_NAME"  = $created.manager.DisplayName
+}
 
 Write-Host "`n`n====================================================" -ForegroundColor Cyan
 Write-Host "  DEMO USERS COMPLETE" -ForegroundColor Green
 Write-Host "====================================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "--- web/.env.local (persona overrides) ---" -ForegroundColor Yellow
-Write-Host "VITE_SPONSOR_UPN=$sponsorUpn"
-Write-Host "VITE_SPONSOR_NAME=$($created.sponsor.DisplayName)"
-Write-Host "VITE_APPROVER_UPN=$approverUpn"
-Write-Host "VITE_APPROVER_NAME=$($created.approver.DisplayName)"
-Write-Host "VITE_MANAGER_UPN=$managerUpn"
-Write-Host "VITE_MANAGER_NAME=$($created.manager.DisplayName)"
+foreach ($k in $envValues.Keys) { Write-Host "$k=$($envValues[$k])" }
+
+if (-not $SkipEnvFile) {
+    try {
+        Set-EnvValues -Path $EnvPath -Values $envValues
+        $resolved = (Resolve-Path -LiteralPath $EnvPath).Path
+        Write-Host "`nUpdated env file: $resolved" -ForegroundColor Green
+    } catch {
+        Write-Host "`nWarning: could not write env file '$EnvPath': $_" -ForegroundColor Yellow
+        Write-Host "Copy the values above into web/.env.local manually." -ForegroundColor DarkYellow
+    }
+} else {
+    Write-Host "`n(-SkipEnvFile set: copy the values above into web/.env.local manually.)" -ForegroundColor DarkGray
+}
 Write-Host ""
 Write-Host "--- Sign-in password (all three users) ---" -ForegroundColor Yellow
 Write-Host $Password
