@@ -76,22 +76,23 @@ VITE_AUTHORITY=https://login.microsoftonline.com/common
 
 The setup steps pre-fill the sponsor and approver UPN fields with
 representative human identities so the demo reads naturally. Defaults target
-the standard Microsoft 365 demo content-pack users (Adele Vance / Megan Bowen /
-Miriam Graham). Override them per tenant in `web/.env.local`:
+dedicated, fully-licensed demo accounts in the test tenant (EntraAgentID Demo1
+/ Demo2 / Demo3). Override them per tenant in `web/.env.local`:
 
 ```
-VITE_SPONSOR_UPN=AdeleV@<tenant>.onmicrosoft.com
-VITE_SPONSOR_NAME=Adele Vance
-VITE_APPROVER_UPN=MeganB@<tenant>.onmicrosoft.com
-VITE_APPROVER_NAME=Megan Bowen
-VITE_MANAGER_UPN=MiriamG@<tenant>.onmicrosoft.com
-VITE_MANAGER_NAME=Miriam Graham
+VITE_SPONSOR_UPN=EntraAgentIDDemo1@<tenant>.onmicrosoft.com
+VITE_SPONSOR_NAME=EntraAgentID Demo1
+VITE_APPROVER_UPN=EntraAgentIDDemo2@<tenant>.onmicrosoft.com
+VITE_APPROVER_NAME=EntraAgentID Demo2
+VITE_MANAGER_UPN=EntraAgentIDDemo3@<tenant>.onmicrosoft.com
+VITE_MANAGER_NAME=EntraAgentID Demo3
 ```
 
 The sponsor must have a `manager` set in Entra for the Lifecycle Workflow
-offboarding demo to transfer sponsorships; the manager persona above should be
-that user. These users do not need M365 licenses for a portal-driven demo —
-approvals and requests are completed in MyAccess.
+offboarding demo to transfer sponsorships; set the sponsor's manager to the
+manager persona above (e.g. Demo1 → Demo3). These accounts are used to sign in
+to MyAccess during the demo, so make sure you can authenticate as them (reset
+password or issue a Temporary Access Pass).
 
 ### 4. API permissions
 
